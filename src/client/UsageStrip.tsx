@@ -8,7 +8,7 @@
  * discovered Go routes, so every other model in the harness is untouched.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createElement, type CSSProperties, type ReactNode } from 'react'
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
 import { USAGE_WINDOW_KEYS, type UsageAccount, type UsageSnapshot, type UsageWindowKey } from '../rpc-contract.ts'
@@ -32,6 +32,22 @@ export const POLL_INTERVAL_MS = 60_000
 export interface UsageStripInjected {
   connection: ConnectionHandle
   selection: SelectionSource
+}
+
+/**
+ * Which account the strip shows for a session's selected provider: the one
+ * whose route list contains it, or undefined when the selection is not an
+ * OpenCode Go route at all (the strip renders nothing in that case).
+ * @param provider - the session's selected provider id.
+ * @param snapshot - the latest host snapshot, or null before the first read.
+ * @returns the account to display, when there is one.
+ */
+export function selectAccount(
+  provider: string | undefined,
+  snapshot: UsageSnapshot | null,
+): UsageAccount | undefined {
+  if (provider === undefined || snapshot === null) return undefined
+  return snapshot.accounts.find(candidate => candidate.providers.includes(provider))
 }
 
 /**
@@ -86,18 +102,14 @@ export function UsageStrip({ connection, selection }: UsageStripInjected): React
     return () => clearInterval(timer)
   }, [])
 
-  const account = useMemo<UsageAccount | undefined>(() => {
-    if (provider === undefined || snapshot === null) return undefined
-    return snapshot.accounts.find(candidate => candidate.providers.includes(provider))
-  }, [snapshot, provider])
-
-  if (provider === undefined || (account === undefined && snapshot === null)) return null
+  const account = selectAccount(provider, snapshot)
   if (account === undefined) return null
 
-  return createElement(StripBody, { account, error, loading, nowMs, onRefresh: () => void load(true) })
+  return createElement(UsageStripBody, { account, error, loading, nowMs, onRefresh: () => void load(true) })
 }
 
-interface StripBodyProps {
+/** Props of the presentational body, split out so it can be rendered directly. */
+export interface UsageStripBodyProps {
   account: UsageAccount
   error: string | null
   loading: boolean
@@ -105,7 +117,12 @@ interface StripBodyProps {
   onRefresh: () => void
 }
 
-function StripBody({ account, error, loading, nowMs, onRefresh }: StripBodyProps): ReactNode {
+/**
+ * The strip's markup, as a pure function of its props.
+ * @param props - the account, its read state and the clock.
+ * @returns the row.
+ */
+export function UsageStripBody({ account, error, loading, nowMs, onRefresh }: UsageStripBodyProps): ReactNode {
   const binding = account.windows === null ? undefined : bindingWindowKey(account.windows)
   const failure = error ?? account.error?.message ?? null
 
