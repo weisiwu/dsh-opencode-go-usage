@@ -125,11 +125,17 @@ export interface UsageStripBodyProps {
 export function UsageStripBody({ account, error, loading, nowMs, onRefresh }: UsageStripBodyProps): ReactNode {
   const binding = account.windows === null ? undefined : bindingWindowKey(account.windows)
   const failure = error ?? account.error?.message ?? null
+  // One line by construction: the read time rides in the refresh control's
+  // tooltip instead of a trailing field, which is what made the row wrap on a
+  // narrow window (measured at 756px: two lines, second one clipped by the
+  // window edge).
+  const stamp = account.fetchedAt === null ? undefined : `更新 ${formatClock(account.fetchedAt)}`
+  const refreshTitle = stamp === undefined ? '立即刷新额度' : `立即刷新额度（${stamp}）`
 
   return createElement(
     'div',
     { style: ROW, 'data-dsh-opencode-go-usage': '' },
-    createElement('span', { style: LABEL }, account.label),
+    createElement('span', { style: LABEL, title: account.label }, account.label),
     createElement('span', { style: KEY }, account.maskedKey.length > 0 ? account.maskedKey : '—'),
     account.windows === null
       ? createElement('span', { style: FAILURE }, failure ?? '读取中…')
@@ -138,8 +144,15 @@ export function UsageStripBody({ account, error, loading, nowMs, onRefresh }: Us
         { style: CHIPS },
         ...USAGE_WINDOW_KEYS.map(key => chip(key, account, key === binding)),
       ),
-    account.windows !== null
-      ? createElement('span', { style: RESET }, `${formatReset(bindingResetAt(account.windows), nowMs)}重置`)
+    account.windows !== null && binding !== undefined
+      ? createElement(
+        'span',
+        {
+          style: RESET,
+          title: `${WINDOW_LABELS[binding]}窗口 ${formatReset(bindingResetAt(account.windows), nowMs)}重置`,
+        },
+        formatReset(bindingResetAt(account.windows), nowMs),
+      )
       : null,
     failure !== null && account.windows !== null ? createElement('span', { style: FAILURE }, failure) : null,
     createElement(
@@ -148,14 +161,11 @@ export function UsageStripBody({ account, error, loading, nowMs, onRefresh }: Us
         type: 'button',
         onClick: onRefresh,
         disabled: loading,
-        title: '立即刷新额度',
+        title: refreshTitle,
         style: REFRESH,
       },
       loading ? '刷新中' : '刷新',
     ),
-    account.fetchedAt !== null
-      ? createElement('span', { style: STAMP }, `更新 ${formatClock(account.fetchedAt)}`)
-      : null,
   )
 }
 
@@ -186,17 +196,36 @@ const ROW: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  flexWrap: 'wrap',
+  // The row sits on the window's last line. Wrapping pushed its second line
+  // against the window edge (and under the Dock on a maximized window), so it
+  // stays one line and lets the label ellipsize instead. It stays left-aligned
+  // to match the progress row above: a bottom-left overlay from another plugin
+  // can still cover its left part, and no alignment fixes that on a window this
+  // narrow — the overlay has to go, not the layout.
+  flexWrap: 'nowrap',
   padding: '4px 10px',
   font: '12px/1.5 ui-sans-serif, system-ui, sans-serif',
   color: 'var(--dsh-text-secondary, #6b7280)',
 }
 
-const LABEL: CSSProperties = { fontWeight: 600, color: 'var(--dsh-text-primary, #374151)' }
+const LABEL: CSSProperties = {
+  fontWeight: 600,
+  color: 'var(--dsh-text-primary, #374151)',
+  flex: '0 1 auto',
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
 
-const KEY: CSSProperties = { fontFamily: 'ui-monospace, SFMono-Regular, monospace', opacity: 0.7 }
+const KEY: CSSProperties = {
+  fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+  opacity: 0.7,
+  flex: '0 0 auto',
+  whiteSpace: 'nowrap',
+}
 
-const CHIPS: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '6px' }
+const CHIPS: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '6px', flex: '0 0 auto' }
 
 const CHIP: CSSProperties = {
   display: 'inline-flex',
@@ -220,13 +249,12 @@ const FILL: CSSProperties = { display: 'block', height: '100%' }
 
 const PERCENT: CSSProperties = { fontVariantNumeric: 'tabular-nums', fontWeight: 600 }
 
-const RESET: CSSProperties = { opacity: 0.8 }
+const RESET: CSSProperties = { opacity: 0.8, flex: '0 0 auto', whiteSpace: 'nowrap' }
 
-const FAILURE: CSSProperties = { color: '#a3352b' }
-
-const STAMP: CSSProperties = { opacity: 0.6, marginLeft: 'auto' }
+const FAILURE: CSSProperties = { color: '#a3352b', flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 
 const REFRESH: CSSProperties = {
+  flex: '0 0 auto',
   border: '1px solid rgba(0,0,0,0.15)',
   background: 'transparent',
   color: 'inherit',

@@ -14,6 +14,8 @@ const flag = (name, fallback) => {
 }
 const URL_TO_OPEN = flag('url', 'http://127.0.0.1:3080/')
 const WAIT_MS = Number(flag('wait', '9000'))
+const WIDTH = Number(flag('width', '1440'))
+const HEIGHT = Number(flag('height', '1400'))
 const PORT = 9334
 const PROFILE = `/tmp/dsh-gui-probe-${String(process.pid)}`
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
@@ -21,7 +23,7 @@ const cookie = JSON.parse(await readFile('/tmp/dsh-cookie.json', 'utf8'))
 
 const chrome = spawn(CHROME, [
   '--headless=new', `--remote-debugging-port=${String(PORT)}`, `--user-data-dir=${PROFILE}`,
-  '--window-size=1440,1400', '--no-first-run', '--no-default-browser-check', '--disable-gpu', 'about:blank',
+  `--window-size=${String(WIDTH)},${String(HEIGHT)}`, '--no-first-run', '--no-default-browser-check', '--disable-gpu', 'about:blank',
 ], { stdio: 'ignore' })
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -70,6 +72,7 @@ try {
   await send('Runtime.enable')
   await send('Log.enable')
   await send('Network.enable')
+  await send('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 2, mobile: false })
   await send('Network.setCookie', {
     name: cookie.name, value: cookie.value, domain: '127.0.0.1', path: '/', httpOnly: true, secure: false,
   })
@@ -174,6 +177,32 @@ try {
   })
   console.log('--- dom probe ---')
   console.log(JSON.stringify(domProbe.result.value, null, 2))
+
+  const rectProbe = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const strip = document.querySelector('[data-dsh-opencode-go-usage]');
+      const composer = document.querySelector('[contenteditable]');
+      const box = (n) => n === null ? null : (() => { const r = n.getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), h: Math.round(r.height) }; })();
+      const ancestors = [];
+      let node = strip;
+      while (node !== null && ancestors.length < 8) {
+        const cs = getComputedStyle(node);
+        ancestors.push({ tag: node.tagName, cls: String(node.className).slice(0, 30), overflow: cs.overflow, h: Math.round(node.getBoundingClientRect().height) });
+        node = node.parentElement;
+      }
+      return {
+        innerHeight: window.innerHeight,
+        scrollHeight: document.documentElement.scrollHeight,
+        strip: box(strip),
+        composer: box(composer),
+        stripBelowFold: strip === null ? null : Math.round(strip.getBoundingClientRect().bottom) > window.innerHeight,
+        ancestors,
+      };
+    })()`,
+    returnByValue: true,
+  })
+  console.log('--- rect probe ---')
+  console.log(JSON.stringify(rectProbe.result.value, null, 1))
 
   console.log('--- failed requests ---')
   for (const event of events) {

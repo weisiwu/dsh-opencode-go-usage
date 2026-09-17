@@ -74,7 +74,9 @@ describe('UsageStripBody markup', () => {
 
   it('counts down to the reset of the binding window — the one with least headroom (weekly 53% left)', () => {
     const markup = render(ACCOUNT, { nowMs: Date.parse('2026-09-17T13:30:00.000Z') })
-    expect(markup).toContain('3天 后重置')
+    expect(markup).toContain('>3天后<')
+    // The short text keeps the row on one line; the full sentence lives in the tooltip.
+    expect(markup).toContain('周窗口 3天后重置')
   })
 
   it('marks a rate-limited window and shows the failure text next to usable numbers', () => {
@@ -87,9 +89,24 @@ describe('UsageStripBody markup', () => {
     }
     const markup = render(blocked, { error: '上游拒绝了这次读取。' })
 
-    expect(markup).toContain('0%')
-    expect(markup).toContain('3天 后重置')
+    expect(markup).toContain('>0%<')
+    expect(markup).toContain('>3天后<')
     expect(markup).toContain('上游拒绝了这次读取。')
+  })
+
+  it('stays on one line: no wrap, and the read time rides in the refresh tooltip', () => {
+    const markup = render(ACCOUNT, { nowMs: Date.parse('2026-09-17T13:30:00.000Z') })
+
+    // Wrapping was what pushed the second line against the window edge on a
+    // 756px-wide window; the row must declare nowrap and allow the label to
+    // ellipsize rather than grow the row.
+    expect(markup).toContain('flex-wrap:nowrap')
+    expect(markup).toContain('text-overflow:ellipsis')
+    // The stamp is no longer a trailing field…
+    expect(markup).not.toContain('margin-left:auto')
+    expect(markup).not.toContain('>更新 ')
+    // …it is the refresh control's tooltip.
+    expect(markup).toContain('立即刷新额度（更新 21:30）')
   })
 
   it('renders the unresolved-credential state instead of numbers', () => {

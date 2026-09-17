@@ -68,10 +68,10 @@ describe('formatReset', () => {
   const now = Date.parse('2026-09-17T13:30:00.000Z')
 
   it('renders days, hours and minutes', () => {
-    expect(formatReset('2026-09-21T00:00:00.000Z', now)).toBe('3天 后')
-    expect(formatReset('2026-09-17T15:40:00.000Z', now)).toBe('2小时10分 后')
-    expect(formatReset('2026-09-17T14:30:00.000Z', now)).toBe('1小时 后')
-    expect(formatReset('2026-09-17T13:45:00.000Z', now)).toBe('15分 后')
+    expect(formatReset('2026-09-21T00:00:00.000Z', now)).toBe('3天后')
+    expect(formatReset('2026-09-17T15:40:00.000Z', now)).toBe('2小时10分后')
+    expect(formatReset('2026-09-17T14:30:00.000Z', now)).toBe('1小时后')
+    expect(formatReset('2026-09-17T13:45:00.000Z', now)).toBe('15分后')
   })
 
   it('reports an elapsed or unparsable instant instead of a nonsense countdown', () => {

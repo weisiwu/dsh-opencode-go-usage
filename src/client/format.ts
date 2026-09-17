@@ -82,7 +82,7 @@ export function bindingResetAt(windows: UsageWindows): string {
  * Render a reset instant as a short relative countdown.
  * @param resetsAt - the ISO instant.
  * @param nowMs - current epoch milliseconds.
- * @returns text such as `2小时10分 后`, `3天 后`, or `已到重置点`.
+ * @returns text such as `2小时10分后`, `3天后`, or `已到重置点`.
  */
 export function formatReset(resetsAt: string, nowMs: number): string {
   const target = Date.parse(resetsAt)
@@ -91,11 +91,11 @@ export function formatReset(resetsAt: string, nowMs: number): string {
   if (deltaMs <= 0) return '已到重置点'
   const minutes = Math.floor(deltaMs / 60_000)
   const days = Math.floor(minutes / (60 * 24))
-  if (days >= 1) return `${String(days)}天 后`
+  if (days >= 1) return `${String(days)}天后`
   const hours = Math.floor(minutes / 60)
   const restMinutes = minutes % 60
-  if (hours >= 1) return restMinutes > 0 ? `${String(hours)}小时${String(restMinutes)}分 后` : `${String(hours)}小时 后`
-  return `${String(Math.max(minutes, 1))}分 后`
+  if (hours >= 1) return restMinutes > 0 ? `${String(hours)}小时${String(restMinutes)}分后` : `${String(hours)}小时后`
+  return `${String(Math.max(minutes, 1))}分后`
 }
 
 /**
