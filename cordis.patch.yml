@@ -1,0 +1,5 @@
+# DSH OpenCode Go usage bundle patch. The browser half is discovered through the
+# package `dsh.client` manifest.
+- insert:
+    - id: opencode-go-usage
+      name: dsh-opencode-go-usage
