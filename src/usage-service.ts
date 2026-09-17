@@ -119,7 +119,17 @@ export function createUsageReader(options: UsageReaderOptions = {}): UsageReader
           }
         }
         const entry = await readShared(seed, secret, force)
-        return { ...base, maskedKey: maskSecret(secret), ...entry }
+        // Project the cache entry onto the wire shape explicitly. Spreading it
+        // would publish the internal `at` stamp, and the browser half validates
+        // each account with an exact-key guard, so one extra field blanks the
+        // whole strip.
+        return {
+          ...base,
+          maskedKey: maskSecret(secret),
+          windows: entry.windows,
+          error: entry.error,
+          fetchedAt: entry.fetchedAt,
+        }
       }))
     },
   }

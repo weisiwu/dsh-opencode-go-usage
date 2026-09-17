@@ -53,12 +53,20 @@ describe('usage account guard', () => {
     expect(isUsageAccount({ ...ACCOUNT, windows: null, error: { type: 'credential-missing', message: '未找到凭据。' }, fetchedAt: null })).toBe(true)
   })
 
-  it('rejects a missing or extra field', () => {
+  it('rejects a missing field or a mistyped one', () => {
     const { maskedKey: _omitted, ...withoutKey } = ACCOUNT
     expect(isUsageAccount(withoutKey)).toBe(false)
-    expect(isUsageAccount({ ...ACCOUNT, extra: 1 })).toBe(false)
     expect(isUsageAccount({ ...ACCOUNT, providers: 'opencode-go-1' })).toBe(false)
     expect(isUsageAccount({ ...ACCOUNT, error: { type: 'x' } })).toBe(false)
+    expect(isUsageAccount({ ...ACCOUNT, windows: 'none' })).toBe(false)
+  })
+
+  it('tolerates an unknown extra field so a host-side addition cannot blank the strip', () => {
+    // 2026-09-17: a host build published its internal cache stamp; the browser
+    // refused the whole payload and the strip vanished. The host now projects
+    // its output explicitly (asserted in the host tests); this guard stays
+    // lenient so version skew degrades to "an unused field", never to nothing.
+    expect(isUsageAccount({ ...ACCOUNT, at: 1789650869253 })).toBe(true)
   })
 })
 

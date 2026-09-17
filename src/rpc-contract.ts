@@ -100,10 +100,23 @@ export function isUsageSnapshot(value: unknown): value is UsageSnapshot {
   return value.accounts.every(isUsageAccount)
 }
 
+/**
+ * Whether a value is a usable account record.
+ *
+ * Every declared field must be present and well-typed, but unknown extra fields
+ * are tolerated: this guard runs in the browser half, which may be older or
+ * newer than the host it talks to, and refusing to draw the strip over a field
+ * it does not even read would make any host-side addition a breaking change.
+ * The host keeps its own output exactly on-contract — that is asserted in the
+ * host tests, where the discipline belongs.
+ */
+/** The fields an account record must carry; extras are tolerated (see below). */
+const ACCOUNT_KEYS = [
+  'id', 'label', 'apiKeyEnv', 'maskedKey', 'providers', 'models', 'origin', 'windows', 'error', 'fetchedAt',
+] as const
+
 export function isUsageAccount(value: unknown): value is UsageAccount {
-  if (!hasExactKeys(value, [
-    'id', 'label', 'apiKeyEnv', 'maskedKey', 'providers', 'models', 'origin', 'windows', 'error', 'fetchedAt',
-  ])) return false
+  if (!isRecord(value)) return false
   return typeof value.id === 'string'
     && typeof value.label === 'string'
     && typeof value.apiKeyEnv === 'string'
@@ -114,6 +127,7 @@ export function isUsageAccount(value: unknown): value is UsageAccount {
     && (value.windows === null || isUsageWindows(value.windows))
     && (value.error === null || isUsageError(value.error))
     && (value.fetchedAt === null || typeof value.fetchedAt === 'string')
+    && ACCOUNT_KEYS.every(key => Object.hasOwn(value, key))
 }
 
 /**
